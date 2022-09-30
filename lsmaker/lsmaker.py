@@ -5,6 +5,7 @@ import numpy as np
 import os
 from pathlib import Path
 import pandas as pd
+import geopandas as gpd
 import shutil
 import requests
 import json
@@ -24,6 +25,24 @@ except:
     pass
 from lsmaker.diagnostics import Diagnostics
 
+
+# renames to translate nhdplus hr columns to nhdplus v2 names
+nhdplus_hr_col_renames = {
+    'fl': {
+        'NHDPlusID': 'COMID',
+        'WBArea_Per': 'WBAREACOMI'
+    },
+    'wb': {
+        'Permanent_': 'COMID'
+    },
+    'pfvaa': {
+        'NHDPlusID': 'ComID',
+        'DnHydroSeq': 'DnHydroseq',
+        'HydroSeq': 'Hydroseq',
+        'MinElevSmo': 'MINELEVSMO',
+        'MaxElevSmo': 'MAXELEVSMO'
+    }
+}
 
 # ## Functions #############################
 def add_projection(line, point):
@@ -263,7 +282,7 @@ def move_point_along_line(x1, x2, dist):
 class LinesinkData:
     maxlines = 4000
 
-    int_dtype = str  # np.int64
+    int_dtype = object  # np.int64
 
     dtypes = {'Label': str,
                     'HeadSpecified': float,
@@ -354,6 +373,7 @@ class LinesinkData:
 
         # columns to retain in NHD files (when joining to GIS lines)
         # Note: may need to add method to handle case discrepancies
+        self.is_nhdplus_hr = False
         self.flowlines_cols = ['COMID', 'FCODE', 'FDATE', 'FLOWDIR', 'FTYPE', 'GNIS_ID', 'GNIS_NAME', 'LENGTHKM',
                                'REACHCODE', 'RESOLUTION', 'WBAREACOMI', 'geometry']
         self.flowlines_cols_dtypes = {'COMID': self.int_dtype,
@@ -724,7 +744,7 @@ class LinesinkData:
         self.zmult = 0.03280839895013123 if self.ComputationalUnits.lower() == 'feet' else 0.01
             
         # get the projection file and crs from either the nearfield or routed area
-        if self.prj is None:
+        if self.prj is None and self.crs is None:
             for filename in self.nearfield, self.routed_area:
                 if filename is not None:
                     name, ext = os.path.splitext(filename)
@@ -735,22 +755,60 @@ class LinesinkData:
                         #with fiona.open(filename) as src:
                         #    self.crs = src.crs
                         #    self.crs_str = to_string(self.crs)
+        elif self.crs is not None:
+            self.crs = gisutils.get_authority_crs(self.crs)
         else:
             #self.crs_str = gisutils.get_proj_str(self.prj)
             self.crs = gisutils.get_shapefile_crs(self.prj)
-        if self.crs is None or self.prj is None:
-            msg = ("Invalid projection file or projection file not found: {}. \
-                Specify a valid ESRI projection file under the \
-                prj: configuration file key".format(self.prj))
+        if self.crs is None and self.prj is None:
+            msg = ("No CRS specified or projection file missing/invalid:\n"
+                   f"prj: {self.prj}\n"
+                   f"crs: {self.crs}\n"
+                    "Specify a valid CRS or ESRI projection file under the \
+                    crs: or prj: configuration file keys".format(self.prj))
             raise ValueError(msg)
 
         # NHDPlus files
-        for variable in 'flowlines', 'elevslope', 'PlusFlowVAA', 'waterbodies':
-            filename = self.__dict__[variable]
-            if filename is None:
-                raise KeyError('Nothing specified for {} in the configuration file!'.format(variable))
-            elif not os.path.exists(filename):
-                raise ValueError('file not found: {}'.format(filename))
+        if self.nhdplus_hr_gdb is not None:
+            self.is_nhdplus_hr = True
+            if not os.path.exists(self.nhdplus_hr_gdb):
+                raise ValueError(f'file not found: {self.nhdplus_hr_gdb}')
+            # first preprocess the nhdplus hr GDB to shapefiles and dbfs
+            # so we can follow the same workflow as NHDPlus
+            preprocessed_dir = Path('nhdplus_hr_files')
+            preprocessed_dir.mkdir(exist_ok=True)
+            if isinstance(self.nhdplus_hr_gdb, str) or isinstance(self.nhdplus_hr_gdb, Path):
+                self.nhdplus_hr_gdb = [self.nhdplus_hr_gdb]
+            layers_names = {
+                'NHDFlowline': 'flowlines', 
+                'NHDWaterbody': 'waterbodies', 
+                'NHDPlusFLowlineVAA': 'PlusFlowVAA'
+            }
+            for layer, name in layers_names.items():
+                dfs = []
+                for f in self.nhdplus_hr_gdb:
+                    df = gpd.read_file(f, driver='OpenFileGDB', layer=layer)
+                    dfs.append(df)
+                df = pd.concat(dfs)
+                if 'FDate' in df.columns:
+                    df['FDate'] = df['FDate'].dt.strftime('%Y-%m-%d')
+                # cast long NHDPlusIDs to strings
+                df['NHDPlusID'] = df['NHDPlusID'].map('{:.0f}'.format)
+                outfile = preprocessed_dir / f"{layer}.shp"
+                if layer == 'NHDPlusFLowlineVAA':
+                    gisutils.df2shp(df.drop('geometry', axis=1), 
+                                    outfile.with_suffix(".dbf"))
+                    self.__dict__[name] = outfile.with_suffix(".dbf")
+                else:
+                    df.to_file(outfile)
+                    self.__dict__[name] = outfile
+        else:
+            for variable in 'flowlines', 'elevslope', 'PlusFlowVAA', 'waterbodies':
+                filename = self.__dict__[variable]
+                if filename is None:
+                    raise KeyError('Nothing specified for {} in the configuration file!'.format(variable))
+                elif not os.path.exists(filename):
+                    raise ValueError(f'file not found: {filename}')
 
         # preprocessed files
         self.preprocdir = os.path.split(self.flowlines_clipped)[0]
@@ -833,7 +891,7 @@ class LinesinkData:
             geom = shape(next(iter(src))['geometry'])
         shp_crs = gisutils.get_shapefile_crs(shapefile)
         if shp_crs != dest_crs:
-            geom = gisutils.project(geom, shp_crs, dest_crs)[0]
+            geom = gisutils.project(geom, shp_crs, dest_crs)#[0]
         return geom
 
     def tf2flag(self, intxt):
@@ -914,6 +972,9 @@ class LinesinkData:
         if self.routed_area is None:
             self.routed_area = self.nearfield
             self.routed_area_tolerance = self.nearfield_tolerance
+        elif self.nearfield is None:
+            self.nearfield = self.routed_area
+            self.nearfield_tolerance = self.routed_area_tolerance
         if self.nearfield is None and self.routed_area is None:
             raise InputFileMissing('Need to supply shapefile of routed area or nearfield.')
 
@@ -921,17 +982,13 @@ class LinesinkData:
             print(('\nNo farfield shapefile supplied.\n'
                   'Creating farfield using buffer of {:.1f} {} around routed area.\n'
                   .format(self.farfield_buffer, self.BasemapUnits)))
-            modelareafile = fiona.open(self.routed_area)
-            nfarea = shape(modelareafile[0]['geometry'])
+            nfarea = self.load_poly(self.routed_area).buffer(0)
             modelarea_farfield = nfarea.buffer(self.farfield_buffer)
             self.farfield = self.nearfield[:-4] + '_ff.shp'
-            output = fiona.open(self.farfield, 'w',
-                                crs=modelareafile.crs,
-                                schema=modelareafile.schema,
-                                driver=modelareafile.driver)
-            output.write({'properties': modelareafile[0]['properties'],
-                          'geometry': mapping(modelarea_farfield)})
-            output.close()
+            gdf = gpd.GeoDataFrame({'id': [0],
+                                    'geometry': [modelarea_farfield]},
+                                   crs=self.crs)
+            gdf.to_file(self.farfield)
 
         # make the output directory if it doesn't exist yet
         if len(self.preprocdir) > 0 and not os.path.isdir(self.preprocdir):
@@ -967,16 +1024,33 @@ class LinesinkData:
             bounds = gisutils.project([self.ff], self.crs, shp_crs)
             bounds = bounds[0].bounds
 
-            self.__dict__[attr] = gisutils.shp2df(shapefiles, filter=bounds)
+            df = gisutils.shp2df(shapefiles, filter=bounds)
+            # rename any nhdplus hr columns 
+            # to their nhdplus v2 counterparts
+            # for nhdplus hr waterbodies, we also need to map NHDPlus IDs
+            # to waterbody IDs, otherwise they won't be located 
+            # within the stream network
+            if self.is_nhdplus_hr and attr == 'wb':
+                nhdplusids = dict(zip(df['Permanent_'], df['NHDPlusID']))
+            df.rename(columns=nhdplus_hr_col_renames[attr], 
+                                       inplace=True)
+            df.columns = df.columns.str.upper()
+            df.rename(columns={'GEOMETRY': 'geometry'}, inplace=True)
+            
             # if NHD features not in model area coodinate system, reproject
             if shp_crs != self.crs:
-                self.__dict__[attr]['geometry'] = gisutils.project(self.__dict__[attr].geometry.tolist(), shp_crs,
+                df['geometry'] = gisutils.project(df.geometry.tolist(), shp_crs,
                                                             self.crs)
             # 1816107
             # for now, take intersection (don't truncate flowlines at farfield boundary)
             print('clipping to {}...'.format(self.farfield))
-            intersects = np.array([l.intersects(self.ff) for l in self.__dict__[attr].geometry])
-            self.__dict__[attr] = self.__dict__[attr][intersects].copy()
+            intersects = np.array([l.intersects(self.ff) for l in df.geometry])
+            self.__dict__[attr] = df[intersects].copy()
+        # map the WBAREACOMIDs from the NHDPlus HR permanent IDs to NHDPlusIDs
+        # (so they are comparable to lines)
+        if self.is_nhdplus_hr:
+            self.__dict__['fl']['WBAREACOMI'] = [nhdplusids.get(pid, pid) for pid in self.__dict__['fl']['WBAREACOMI']]
+            self.__dict__['wb']['COMID'] = [nhdplusids.get(pid, pid) for pid in self.__dict__['wb']['COMID']]
         if self.clip_farfield:
             print('truncating waterbodies at farfield boundary...')
             # get rid of any islands in the process
@@ -1008,12 +1082,12 @@ class LinesinkData:
 
         print('\nmaking donut polygon of farfield (with routed area removed)...')
         ffdonut = self.ff.difference(self.ra)
-        with fiona.open(self.routed_area) as src:
-            with fiona.open(self.farfield_mp, 'w', **src.meta) as output:
-                print(('writing {}'.format(self.farfield_mp)))
-                f = next(iter(src))
-                f['geometry'] = mapping(ffdonut)
-                output.write(f)
+        gdf = gpd.GeoDataFrame({'id': [0],
+                                'geometry': [ffdonut]},
+                                crs=self.crs)
+        gdf.to_file(self.farfield_mp)
+        print(f"wrote {self.farfield_mp}")
+        
 
         if self.routed_area is not None and self.routed_area != self.nearfield:
             print('\nmaking donut polygon of routed area (with nearfield area removed)...')
@@ -1021,16 +1095,21 @@ class LinesinkData:
                 raise ValueError('Nearfield area must be within routed area!')
 
             donut = self.ra.difference(self.nf)
-            with fiona.open(self.nearfield) as src:
-                with fiona.open(self.routed_mp, 'w', **src.meta) as output:
-                    print(('writing {}'.format(self.routed_mp)))
-                    f = next(iter(src))
-                    f['geometry'] = mapping(donut)
-                    output.write(f)
+            gdf = gpd.GeoDataFrame({'id': [0],
+                                'geometry': [donut]},
+                                crs=self.crs)
+            gdf.to_file(self.routed_mp)
+            print(f"wrote {self.routed_mp}")
 
         # drop waterbodies that aren't lakes bigger than min size
         min_size = np.min([self.min_nearfield_wb_size, self.min_waterbody_size, self.min_farfield_wb_size])
-        self.wb = self.wb.loc[(self.wb.FTYPE == 'LakePond') & (self.wb.AREASQKM > min_size)].copy()
+        # Note: NHDPlus v2 has string FTYPEs ('LakePond', etc)
+        # It is unclear whether this is also the case for NHDPlus HR;
+        # the Alaska (Kenai Peninsula) dataset for the Beaver Creek example has numeric FTYPEs,
+        # this may be an artifact of the dataset being in a 'beta' version
+        # There is no mention of numeric FTYPEs in the NHDPlus HR documentation
+        is_lake = (self.wb.FTYPE == 'LakePond') | (self.wb.FTYPE == 390)
+        self.wb = self.wb.loc[is_lake & (self.wb.AREASQKM > min_size)].copy()
 
         print('\ngetting elevations for waterbodies not in the stream network')
         isolated_wb = self.wb
@@ -1078,9 +1157,12 @@ class LinesinkData:
                 axis=1, inplace=True)
         # might want to consider enforcing integer index here if strings cause problems
         #clipto = df.index.tolist()
-        elevs = gisutils.shp2df(self.elevslope, index='COMID', index_dtype=self.int_dtype)  #, clipto=clipto)
-        elevs = elevs.loc[elevs.COMID.isin(df.index)]
-        pfvaa = gisutils.shp2df(self.PlusFlowVAA, index='COMID', index_dtype=self.int_dtype)  #, clipto=clipto)
+
+        pfvaa = gisutils.shp2df(self.PlusFlowVAA)  #, clipto=clipto)
+        pfvaa.rename(columns=nhdplus_hr_col_renames['pfvaa'], 
+                                       inplace=True)
+        pfvaa.index = pfvaa['ComID']
+            
         pfvaa = pfvaa.loc[pfvaa.ComID.isin(df.index)]
         wbs = gisutils.shp2df(self.waterbodies_clipped, index='COMID', index_dtype=self.int_dtype).drop_duplicates('COMID')
         wbs.drop([c for c in wbs.columns if c.lower() not in [cc.lower() for cc in self.wb_cols]],
@@ -1093,23 +1175,34 @@ class LinesinkData:
         mps = [i for i in wbs.index if 'Multi' in wbs.loc[i, 'geometry'].type]
         wbs = wbs.drop(mps, axis=0)
 
-        # join NHD tables to lines
-        df = df.join(elevs[self.elevslope_cols], how='inner', lsuffix='1')
+        # load the elevslope table (NHDPlus v2 only)
+        if not self.is_nhdplus_hr:
+            elevs = gisutils.shp2df(self.elevslope, index='COMID', index_dtype=self.int_dtype)  #, clipto=clipto)
+            elevs = elevs.loc[elevs.COMID.isin(df.index)]
+            df = df.join(elevs[self.elevslope_cols], how='inner', lsuffix='1')
+        else:
+            # in NHDPlus HR, the elevslope and pfvaa tables are apparently combined
+            self.pfvaa_cols += self.elevslope_cols
         df = df.join(pfvaa[self.pfvaa_cols], how='inner', lsuffix='1')
         self._enforce_dtypes(df)
 
         # read in nearfield and farfield boundaries
-        nf = gisutils.shp2df(self.nearfield)
-        nfg = nf.iloc[0]['geometry']  # polygon representing nearfield
+        #nf = gisutils.shp2df(self.nearfield)
+        #nfg = nf.iloc[0]['geometry']  
+        # load and reproject nearfield poly to model CRS
+        nfg = self.load_poly(self.nearfield) # polygon representing nearfield
         if self.routed_area is not None and self.routed_area != self.nearfield:
-            ra = gisutils.shp2df(self.routed_mp)
-            rag = ra.iloc[0]['geometry']
+            #ra = gisutils.shp2df(self.routed_mp)
+            #rag = ra.iloc[0]['geometry']
+            # load and reproject routed area poly to model CRS
+            rag = self.load_poly(self.routed_mp) # polygon representing the routed area
         else:
             rag = nfg
             nfg = Polygon() # no nearfield specified
-        ff = gisutils.shp2df(self.farfield_mp)
-        ffg = ff.iloc[0]['geometry']  # shapely geometry object for farfield (polygon with interior ring for nearfield)
-
+        #ff = gisutils.shp2df(self.farfield_mp)
+        #ffg = ff.iloc[0]['geometry']  # shapely geometry object for farfield (polygon with interior ring for nearfield)
+        ffg = self.load_poly(self.farfield_mp) # polygon representing the farfield area
+        
         print('\nidentifying farfield and nearfield LinesinkData...')
         df['farfield'] = [line.intersects(ffg) and not line.intersects(rag) for line in df.geometry]
         wbs['farfield'] = [poly.intersects(ffg) and not poly.intersects(rag) for poly in wbs.geometry]
@@ -1117,6 +1210,15 @@ class LinesinkData:
         wbs['routed'] = [poly.intersects(rag) for poly in wbs.geometry]
         df['nearfield'] = [line.intersects(nfg) for line in df.geometry]
         wbs['nearfield'] = [poly.intersects(nfg) for poly in wbs.geometry]
+        
+        # assign any double selected features to more nearfield area
+        df.loc[df['routed'] & df['nearfield'], 'routed'] = False
+        df.loc[df['farfield'] & df['routed'], 'farfield'] = False
+        df.loc[df['farfield'] & df['nearfield'], 'farfield'] = False
+        
+        # all features should be in zone of the model areas
+        assert np.all(df[['farfield', 'routed', 'nearfield']].sum(axis=1) == 1), \
+            "Some features are not in the model!"
 
         if self.asum_thresh_ra > 0.:
             print('\nremoving streams in routed area with arbolate sums < {:.2f}'.format(self.asum_thresh_ra))
@@ -1161,9 +1263,10 @@ class LinesinkData:
         df = df[farfield_retain].copy()
 
         print('dropping waterbodies from routed area that are not lakes larger than {}...'.format(self.min_waterbody_size))
-        nearfield_wbs = wbs.nearfield.values & (wbs.AREASQKM > self.min_nearfield_wb_size) & (wbs.FTYPE == 'LakePond')
-        routedarea_wbs = wbs.routed.values & (wbs.AREASQKM > self.min_waterbody_size) & (wbs.FTYPE == 'LakePond')
-        farfield_wbs = wbs.farfield.values & (wbs.AREASQKM > self.min_farfield_wb_size) & (wbs.FTYPE == 'LakePond')
+        is_wb = (wbs.FTYPE == 'LakePond') | (wbs.FTYPE == '390')
+        nearfield_wbs = wbs.nearfield.values & (wbs.AREASQKM > self.min_nearfield_wb_size) & is_wb
+        routedarea_wbs = wbs.routed.values & (wbs.AREASQKM > self.min_waterbody_size) & is_wb
+        farfield_wbs = wbs.farfield.values & (wbs.AREASQKM > self.min_farfield_wb_size) & is_wb
 
         print('dropping waterbodies from nearfield that are not lakes larger than {}...\n'
               'dropping waterbodies from farfield that are not lakes larger than {}...'.format(self.min_waterbody_size,
@@ -1284,6 +1387,8 @@ class LinesinkData:
         # add column of lists, containing linesink coordinates
         df['ls_coords'] = [list(g.coords) for g in df.ls_geom]
 
+        # this may be a duplicate of the check above
+        # that all features are in nearfield, routed area or farfield
         assert np.all(np.array([len(c) for c in df.ls_coords]) > 0) # shouldn't be an empty coordinates
 
         return df
@@ -1626,14 +1731,14 @@ class LinesinkData:
 
         # enforce integers columns
         self.df.index = self.df.index.astype(self.int_dtype)
-        self.df['COMID'] = self.df.COMID.astype(self.int_dtype)
-
-        df = self.df
 
         # simplify the lines in the df (dataframe) attribute
         self.lines_df = self.simplify_lines()
 
-        # add linesink geometries back in to dataframe
+        # add linesink geometries back in to dataframeype)
+        self.df['COMID'] = self.df.COMID.astype(self.int_dtype)
+
+        df = self.df
         #df['ls_geom'] = self.lines_df['ls_geom']
         df['ls_coords'] = self.lines_df['ls_coords']
 
@@ -1700,6 +1805,7 @@ class LinesinkData:
 
         # widths for lines
         arbolate_sum_col = [c for c in df.columns if 'arbolate' in c.lower()][0]
+        df.loc[df[arbolate_sum_col] < 0, arbolate_sum_col] = np.nan
         df['width'] = df[arbolate_sum_col].map(lambda x: width_from_arboate(x, self.lmbda))
 
         # widths for lakes

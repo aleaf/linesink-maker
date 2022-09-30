@@ -3,7 +3,11 @@ GlobalSettings:
   # and output will be generated.
   working_dir: '.'
   # The projected coordinate reference system (CRS) for the model
+  # (as an ESRI WKT projection file)
   prj: 
+  # The projected coordinate reference system (CRS) for the model
+  # (as any input to the pyproj CRS class)
+  crs: 
   # elevation units multiplier (from NHDPlus cm to model units)
   zmult: 0.03280839895013123
   # global resistance value to apply to all resistance LinesinkData
@@ -22,8 +26,8 @@ GlobalSettings:
   # default (PEST) parameter name for linesink resistance
   ScenResistance: Rlinesink
   # model length units (feet or meters)
-  ComputationalUnits: feet
-  # 
+  ComputationalUnits: meters
+  BasemapUnits: meters
   chkScenario: True
   preproc: True  # whether or not to run preprocessing
 
@@ -55,6 +59,7 @@ NHDFiles:
   elevslope: 
   PlusFlowVAA: 
   waterbodies: 
+  nhdplus_hr_gdb:
 
 PreprocessedFiles:
   DEM:
