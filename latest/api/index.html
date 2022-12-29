@@ -4,7 +4,7 @@
   <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>API reference &mdash; linesink-maker 0.1.2.post21.dev0+gb8f5a35 documentation</title>
+  <title>API reference &mdash; linesink-maker 0.1.2.post24.dev0+ga720f0f documentation</title>
       <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
       <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
       <link rel="stylesheet" href="../_static/plot_directive.css" type="text/css" />
@@ -18,6 +18,7 @@
         <script src="../_static/underscore.js"></script>
         <script src="../_static/_sphinx_javascript_frameworks_compat.js"></script>
         <script src="../_static/doctools.js"></script>
+        <script src="../_static/sphinx_highlight.js"></script>
         <script src="../_static/clipboard.min.js"></script>
         <script src="../_static/copybutton.js"></script>
         <script crossorigin="anonymous" integrity="sha256-Ae2Vz/4ePdIu6ZyI/5ZGsYnb+m0JlOmKPjt6XZ9JJkA=" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.4/require.min.js"></script>
@@ -36,7 +37,7 @@
             <a href="../index.html" class="icon icon-home"> linesink-maker
           </a>
               <div class="version">
-                0.1.2.post21.dev0+gb8f5a35
+                0.1.2.post24.dev0+ga720f0f
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
@@ -63,7 +64,51 @@
 </ul>
 <p class="caption" role="heading"><span class="caption-text">Reference</span></p>
 <ul class="current">
-<li class="toctree-l1 current"><a class="current reference internal" href="#"> Code Reference</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#"> Code Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#lsmaker.lsmaker.EmptyDataFrame"><code class="docutils literal notranslate"><span class="pre">EmptyDataFrame</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#lsmaker.lsmaker.InputFileMissing"><code class="docutils literal notranslate"><span class="pre">InputFileMissing</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#lsmaker.lsmaker.LinesinkData"><code class="docutils literal notranslate"><span class="pre">LinesinkData</span></code></a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#lsmaker.lsmaker.LinesinkData.adjust_zero_gradient"><code class="docutils literal notranslate"><span class="pre">LinesinkData.adjust_zero_gradient()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#lsmaker.lsmaker.LinesinkData.drop_crossing_lines"><code class="docutils literal notranslate"><span class="pre">LinesinkData.drop_crossing_lines()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#lsmaker.lsmaker.LinesinkData.drop_duplicates"><code class="docutils literal notranslate"><span class="pre">LinesinkData.drop_duplicates()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#lsmaker.lsmaker.LinesinkData.dtypes"><code class="docutils literal notranslate"><span class="pre">LinesinkData.dtypes</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#lsmaker.lsmaker.LinesinkData.fcodes"><code class="docutils literal notranslate"><span class="pre">LinesinkData.fcodes</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#lsmaker.lsmaker.LinesinkData.int_dtype"><code class="docutils literal notranslate"><span class="pre">LinesinkData.int_dtype</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#lsmaker.lsmaker.LinesinkData.list_updown_comids"><code class="docutils literal notranslate"><span class="pre">LinesinkData.list_updown_comids()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#lsmaker.lsmaker.LinesinkData.load_poly"><code class="docutils literal notranslate"><span class="pre">LinesinkData.load_poly()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#lsmaker.lsmaker.LinesinkData.make_linesinks"><code class="docutils literal notranslate"><span class="pre">LinesinkData.make_linesinks()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#lsmaker.lsmaker.LinesinkData.map_confluences"><code class="docutils literal notranslate"><span class="pre">LinesinkData.map_confluences()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#lsmaker.lsmaker.LinesinkData.map_outsegs"><code class="docutils literal notranslate"><span class="pre">LinesinkData.map_outsegs()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#lsmaker.lsmaker.LinesinkData.maxlines"><code class="docutils literal notranslate"><span class="pre">LinesinkData.maxlines</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#lsmaker.lsmaker.LinesinkData.preprocess"><code class="docutils literal notranslate"><span class="pre">LinesinkData.preprocess()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#lsmaker.lsmaker.LinesinkData.prototype"><code class="docutils literal notranslate"><span class="pre">LinesinkData.prototype()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#lsmaker.lsmaker.LinesinkData.read_lsmaker_xml"><code class="docutils literal notranslate"><span class="pre">LinesinkData.read_lsmaker_xml()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#lsmaker.lsmaker.LinesinkData.read_lsmaker_yaml"><code class="docutils literal notranslate"><span class="pre">LinesinkData.read_lsmaker_yaml()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#lsmaker.lsmaker.LinesinkData.read_lss"><code class="docutils literal notranslate"><span class="pre">LinesinkData.read_lss()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#lsmaker.lsmaker.LinesinkData.run_diagnostics"><code class="docutils literal notranslate"><span class="pre">LinesinkData.run_diagnostics()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#lsmaker.lsmaker.LinesinkData.set_crs"><code class="docutils literal notranslate"><span class="pre">LinesinkData.set_crs()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#lsmaker.lsmaker.LinesinkData.setup_linesink_lakes"><code class="docutils literal notranslate"><span class="pre">LinesinkData.setup_linesink_lakes()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#lsmaker.lsmaker.LinesinkData.simplify_lines"><code class="docutils literal notranslate"><span class="pre">LinesinkData.simplify_lines()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#lsmaker.lsmaker.LinesinkData.tf2flag"><code class="docutils literal notranslate"><span class="pre">LinesinkData.tf2flag()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#lsmaker.lsmaker.LinesinkData.write_lss"><code class="docutils literal notranslate"><span class="pre">LinesinkData.write_lss()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#lsmaker.lsmaker.LinesinkData.write_lss_by_huc"><code class="docutils literal notranslate"><span class="pre">LinesinkData.write_lss_by_huc()</span></code></a></li>
+<li class="toctree-l3"><a class="reference internal" href="#lsmaker.lsmaker.LinesinkData.write_shapefile"><code class="docutils literal notranslate"><span class="pre">LinesinkData.write_shapefile()</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#lsmaker.lsmaker.add_projection"><code class="docutils literal notranslate"><span class="pre">add_projection()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#lsmaker.lsmaker.add_vertices_at_testpoints"><code class="docutils literal notranslate"><span class="pre">add_vertices_at_testpoints()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#lsmaker.lsmaker.closest_vertex_ind"><code class="docutils literal notranslate"><span class="pre">closest_vertex_ind()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#lsmaker.lsmaker.get_elevation_from_epqs"><code class="docutils literal notranslate"><span class="pre">get_elevation_from_epqs()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#lsmaker.lsmaker.get_elevations_from_epqs"><code class="docutils literal notranslate"><span class="pre">get_elevations_from_epqs()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#lsmaker.lsmaker.lake_width"><code class="docutils literal notranslate"><span class="pre">lake_width()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#lsmaker.lsmaker.linesinks"><code class="docutils literal notranslate"><span class="pre">linesinks</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#lsmaker.lsmaker.move_point_along_line"><code class="docutils literal notranslate"><span class="pre">move_point_along_line()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#lsmaker.lsmaker.name"><code class="docutils literal notranslate"><span class="pre">name()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#lsmaker.lsmaker.uniquelist"><code class="docutils literal notranslate"><span class="pre">uniquelist()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#lsmaker.lsmaker.w_parameter"><code class="docutils literal notranslate"><span class="pre">w_parameter()</span></code></a></li>
+<li class="toctree-l2"><a class="reference internal" href="#lsmaker.lsmaker.width_from_arboate"><code class="docutils literal notranslate"><span class="pre">width_from_arboate()</span></code></a></li>
+</ul>
+</li>
 <li class="toctree-l1"><a class="reference internal" href="../config-file-defaults.html"> Configuration defaults</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../release-history.html"> Release History</a></li>
 </ul>
@@ -85,8 +130,8 @@
         <div class="rst-content">
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
-      <li>API reference</li>
+      <li><a href="../index.html" class="icon icon-home"></a></li>
+      <li class="breadcrumb-item active">API reference</li>
       <li class="wy-breadcrumbs-aside">
             <a href="../_sources/api/index.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -125,19 +170,19 @@
 <dl class="py exception">
 <dt class="sig sig-object py" id="lsmaker.lsmaker.EmptyDataFrame">
 <em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">lsmaker.lsmaker.</span></span><span class="sig-name descname"><span class="pre">EmptyDataFrame</span></span><a class="reference internal" href="../_modules/lsmaker/lsmaker.html#EmptyDataFrame"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lsmaker.lsmaker.EmptyDataFrame" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/exceptions.html#Exception" title="(in Python v3.10)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></a></p>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/exceptions.html#Exception" title="(in Python v3.11)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></a></p>
 </dd></dl>
 
 <dl class="py exception">
 <dt class="sig sig-object py" id="lsmaker.lsmaker.InputFileMissing">
 <em class="property"><span class="pre">exception</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">lsmaker.lsmaker.</span></span><span class="sig-name descname"><span class="pre">InputFileMissing</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">infile</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lsmaker/lsmaker.html#InputFileMissing"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lsmaker.lsmaker.InputFileMissing" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/exceptions.html#Exception" title="(in Python v3.10)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></a></p>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/exceptions.html#Exception" title="(in Python v3.11)"><code class="xref py py-class docutils literal notranslate"><span class="pre">Exception</span></code></a></p>
 </dd></dl>
 
 <dl class="py class">
 <dt class="sig sig-object py" id="lsmaker.lsmaker.LinesinkData">
 <em class="property"><span class="pre">class</span><span class="w"> </span></em><span class="sig-prename descclassname"><span class="pre">lsmaker.lsmaker.</span></span><span class="sig-name descname"><span class="pre">LinesinkData</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">infile</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">GFLOW_lss_xml</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lsmaker/lsmaker.html#LinesinkData"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lsmaker.lsmaker.LinesinkData" title="Permalink to this definition">¶</a></dt>
-<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.10)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
+<dd><p>Bases: <a class="reference external" href="https://docs.python.org/3/library/functions.html#object" title="(in Python v3.11)"><code class="xref py py-class docutils literal notranslate"><span class="pre">object</span></code></a></p>
 <dl class="py method">
 <dt class="sig sig-object py" id="lsmaker.lsmaker.LinesinkData.adjust_zero_gradient">
 <span class="sig-name descname"><span class="pre">adjust_zero_gradient</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">df</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">increment</span></span><span class="o"><span class="pre">=</span></span><span class="default_value"><span class="pre">0.01</span></span></em><span class="sig-paren">)</span><a class="reference internal" href="../_modules/lsmaker/lsmaker.html#LinesinkData.adjust_zero_gradient"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#lsmaker.lsmaker.LinesinkData.adjust_zero_gradient" title="Permalink to this definition">¶</a></dt>
@@ -166,7 +211,7 @@
 <dl class="py attribute">
 <dt class="sig sig-object py" id="lsmaker.lsmaker.LinesinkData.int_dtype">
 <span class="sig-name descname"><span class="pre">int_dtype</span></span><a class="headerlink" href="#lsmaker.lsmaker.LinesinkData.int_dtype" title="Permalink to this definition">¶</a></dt>
-<dd><p>alias of <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.10)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a></p>
+<dd><p>alias of <a class="reference external" href="https://docs.python.org/3/library/stdtypes.html#str" title="(in Python v3.11)"><code class="xref py py-class docutils literal notranslate"><span class="pre">str</span></code></a></p>
 </dd></dl>
 
 <dl class="py method">
@@ -460,7 +505,7 @@ described by Feinstein et al (2010), Appendix 2, p 266.</p>
 
   <div role="contentinfo">
     <p>
-      <span class="lastupdated">Last updated on Aug 25, 2022.
+      <span class="lastupdated">Last updated on Dec 29, 2022.
       </span></p>
   </div>
 
